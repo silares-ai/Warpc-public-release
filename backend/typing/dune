@@ -1,0 +1,10 @@
+; programs the types refuse: each must fail to compile, with its refusal
+(rule
+ (alias runtest)
+ (deps
+  refuse.sh
+  (glob_files *.ml)
+  (glob_files ../.warpc_lib.objs/byte/*.cmi)
+  (glob_files ../../lib/.layouts.objs/byte/*.cmi))
+ (action
+  (run bash refuse.sh %{ocamlc} ../.warpc_lib.objs/byte ../../lib/.layouts.objs/byte)))

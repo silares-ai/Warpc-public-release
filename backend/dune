@@ -1,0 +1,20 @@
+(library
+ (name warpc_lib)
+ (wrapped false)
+ (modules :standard \ warpc test_derive test_core)
+ (libraries layouts))
+
+(executable
+ (name warpc)
+ (modules warpc)
+ (libraries warpc_lib))
+
+(test
+ (name test_derive)
+ (modules test_derive)
+ (libraries warpc_lib layouts))
+
+(test
+ (name test_core)
+ (modules test_core)
+ (libraries warpc_lib layouts))

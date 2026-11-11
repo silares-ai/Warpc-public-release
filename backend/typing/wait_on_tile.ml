@@ -1,0 +1,5 @@
+(* refused: Type Mem.tile = [ `Tile ] is not compatible with type Mem.barrier = [ `Barrier ] *)
+(* a wait on an operand tile, not a barrier *)
+let km = Mem.create (Prog.create ())
+let sa = Mem.ring km ~name:"sa" ~depth:4 ~elem:2 (Atom.swizzled_rows ~rows:128 ~cols:64 ~elem:2)
+let () = Mem.wait km (Mem.at sa [ C 0 ]) ~parity:(Core.r "parity")
