@@ -26,6 +26,47 @@ This is how it works.
 - [How we measured](#how-we-measured)
 - [Try it](#try-it)
 
+## Try it
+
+warpc needs OCaml 5 and dune 3 with the `base`, `sexplib0` and `stdio`
+libraries (`opam install dune base stdio`). Running a kernel needs a B200,
+ptxas (`pip install nvidia-cuda-nvcc`) and numpy.
+
+```sh
+dune build && dune test
+./_build/default/backend/warpc.exe gemm 4096 4096 4096 > k.sass
+./_build/default/backend/warpc.exe check gemm 4096 4096 4096
+./_build/default/backend/warpc.exe hb gemm 4096 4096 4096
+./_build/default/backend/warpc.exe lift k.sass > k.ptx
+ptxas -arch=sm_100a k.ptx -o k.cubin
+python3 backend/node/run_tma.py k.sass k.cubin
+```
+
+`run_tma.py` encodes the tensor maps from the kernel's header, launches the
+cubin, checks it against numpy and times it. `warpc --sm sm_103a` builds
+for the B300. ptxas 12.9 or later builds every program.
+[`docs/warpc.md`](docs/warpc.md) is the full reference: the language, the
+checks, the lifter, and every program's options.
+
+## Repository
+
+    lib/              the layout algebra: shapes, strides and replication,
+                      swizzles, composition, the decision procedure, emission
+    backend/          warpc
+      core, prog      the language: statements, registers, indices, constructs
+      mem, pipe       buffers declared with layouts; pipes between warps
+      atom, store     the instructions' layouts; the accumulator's way out
+      color           register colouring, an error rather than a spill
+      interp          the host-side checker
+      lift            SASS text to PTX
+      gemm_one, gemm_pair, gemm_swapped, programs
+                      the GEMMs, and the rule that picks one for a shape
+      typing/         programs the types refuse
+      node/           launching, checking and timing on the GPU
+    test/             the algebra against enumeration, CuTe's documented
+                      examples, and a table of layouts in use
+    docs/warpc.md     the full reference
+
 ## The numbers
 
 One B200, fp16 in, fp32 out, C = A B^T. Each call runs alone: the next is
@@ -491,44 +532,3 @@ export CUDA_LAUNCH_BLOCKING=1 CUDA_INJECTION64_PATH=libktrace.so KT_LAST=400
 AB_SERIES=1 python3 backend/node/ab.py 1 400 k.cubin
 CQ_NOBLOCK=1 ./cublas_q7 2048 2048 2048 400 ALGO
 ```
-
-## Try it
-
-warpc needs OCaml 5 and dune 3 with the `base`, `sexplib0` and `stdio`
-libraries (`opam install dune base stdio`). Running a kernel needs a B200,
-ptxas (`pip install nvidia-cuda-nvcc`) and numpy.
-
-```sh
-dune build && dune test
-./_build/default/backend/warpc.exe gemm 4096 4096 4096 > k.sass
-./_build/default/backend/warpc.exe check gemm 4096 4096 4096
-./_build/default/backend/warpc.exe hb gemm 4096 4096 4096
-./_build/default/backend/warpc.exe lift k.sass > k.ptx
-ptxas -arch=sm_100a k.ptx -o k.cubin
-python3 backend/node/run_tma.py k.sass k.cubin
-```
-
-`run_tma.py` encodes the tensor maps from the kernel's header, launches the
-cubin, checks it against numpy and times it. `warpc --sm sm_103a` builds
-for the B300. ptxas 12.9 or later builds every program.
-[`docs/warpc.md`](docs/warpc.md) is the full reference: the language, the
-checks, the lifter, and every program's options.
-
-## Repository
-
-    lib/              the layout algebra: shapes, strides and replication,
-                      swizzles, composition, the decision procedure, emission
-    backend/          warpc
-      core, prog      the language: statements, registers, indices, constructs
-      mem, pipe       buffers declared with layouts; pipes between warps
-      atom, store     the instructions' layouts; the accumulator's way out
-      color           register colouring, an error rather than a spill
-      interp          the host-side checker
-      lift            SASS text to PTX
-      gemm_one, gemm_pair, gemm_swapped, programs
-                      the GEMMs, and the rule that picks one for a shape
-      typing/         programs the types refuse
-      node/           launching, checking and timing on the GPU
-    test/             the algebra against enumeration, CuTe's documented
-                      examples, and a table of layouts in use
-    docs/warpc.md     the full reference
